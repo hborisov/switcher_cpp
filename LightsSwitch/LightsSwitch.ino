@@ -4,12 +4,15 @@
 #include <ESP8266mDNS.h>
 #include <EEPROM.h>
 
-const char* SWITCH_ID = "000015";
+#define IS_CONFIGURED_ADDRESS   0
+#define SSID_SIZE_ADDRESS       1
+#define SSID_START_ADDRESS      2
 
-const char* APssid = "LightSwitch";
+const char* SWITCH_ID = "000015";
+const char* APssid = "Switch - 000015";
 bool isConfigured = false;
-String ssid;// = "borisov_2Ghz";
-String password;// = "abcd1234";
+String ssid;
+String password;
 
 int SWITCH_STATE = HIGH;
 
@@ -46,13 +49,13 @@ void handleRoot() {
 
 void loadConfig() {
   EEPROM.begin(512);
-  isConfigured = EEPROM.read(0);
-  int _ssidSize = EEPROM.read(1);
+  isConfigured = EEPROM.read(IS_CONFIGURED_ADDRESS);
+  int _ssidSize = EEPROM.read(SSID_SIZE_ADDRESS);
   char _ssid[_ssidSize];
   Serial.println(_ssidSize);
   Serial.println(", ");
   for (int i=0; i<_ssidSize; i++) {
-    char tempByte = EEPROM.read(i+2);
+    char tempByte = EEPROM.read(SSID_START_ADDRESS+i);
     _ssid[i] = tempByte;
     Serial.print(tempByte);
     Serial.print(", ");
@@ -60,9 +63,6 @@ void loadConfig() {
   Serial.println("");
   _ssid[_ssidSize] = '\0';
   ssid = String(_ssid);
-  
-  //strncpy(ssid, _ssid, _ssidSize);
-  //ssid = _ssid;
 
   int _passwordSize = EEPROM.read(_ssidSize+2);
   char _password[_passwordSize];
@@ -76,8 +76,6 @@ void loadConfig() {
   }
   Serial.println("");
   _password[_passwordSize] = '\0';
-  //strncpy(password, _password, _passwordSize);
-  //password = _password;
   String str(_password);
   Serial.println(str);
   password = String(_password);
@@ -91,21 +89,11 @@ void loadConfig() {
 
 void handleConfig() {
  if (server.hasArg("ssid") && server.hasArg("password")) {
-    //int _ssidSize = server.arg("ssid").length();//sizeof(server.arg("ssid"));
-    //char _ssid[_ssidSize];
-    //server.arg("ssid").toCharArray(_ssid, sizeof(_ssid));
-    //ssid = _ssid;
-    //strncpy(ssid, _ssid, _ssidSize);
     ssid = server.arg("ssid");
     
     Serial.println(ssid);
     Serial.println(ssid.length());
-
-    //int _passwordSize = server.arg("password").length()+1; //sizeof(server.arg("password"));
-    //char _password[_passwordSize];
-    //server.arg("password").toCharArray(_password, sizeof(_password));
-    //password = _password;
-    //strncpy(password, _password, _passwordSize);
+    
     password = server.arg("password");
     
     Serial.println(password);
@@ -137,7 +125,6 @@ void handleNotFound(){
 }
 
 int connectToWiFi() {
-    //WiFi.mode(WIFI_STA);
     int _ssidSize = ssid.length()+1;
     char _ssid[_ssidSize];
     ssid.toCharArray(_ssid, sizeof(_ssid));
@@ -191,18 +178,14 @@ void setup(void){
   Serial.println("Loading Config...");
   loadConfig();
   Serial.println("Loaded.");
-  //if (isConfigured) {
-    if (connectToWiFi() == -1) {
-      WiFi.softAP(APssid);
-      IPAddress myIP = WiFi.softAPIP();
-      Serial.println("IP Address:");
-      Serial.println(myIP);
-      isConfigured = false;
-    }
-    //vSAP_Auth("68806692","e7rtP5ub");
-  //} else {
-    
-  //}
+  if (connectToWiFi() == -1) {
+    WiFi.softAP(APssid);
+    IPAddress myIP = WiFi.softAPIP();
+    Serial.println("IP Address:");
+    Serial.println(myIP);
+    isConfigured = false;
+  }
+  //vSAP_Auth("68806692","e7rtP5ub");
   
   server.on("/on", switchOn);
   server.on("/off", switchOff);
