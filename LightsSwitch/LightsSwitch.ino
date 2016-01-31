@@ -8,8 +8,8 @@ const char* SWITCH_ID = "000015";
 
 const char* APssid = "LightSwitch";
 bool isConfigured = false;
-char ssid[64];// = "borisov_2Ghz";
-char password[64];// = "abcd1234";
+String ssid;// = "borisov_2Ghz";
+String password;// = "abcd1234";
 
 int SWITCH_STATE = HIGH;
 
@@ -59,7 +59,9 @@ void loadConfig() {
   }
   Serial.println("");
   _ssid[_ssidSize] = '\0';
-  strncpy(ssid, _ssid, _ssidSize);
+  ssid = String(_ssid);
+  
+  //strncpy(ssid, _ssid, _ssidSize);
   //ssid = _ssid;
 
   int _passwordSize = EEPROM.read(_ssidSize+2);
@@ -74,9 +76,14 @@ void loadConfig() {
   }
   Serial.println("");
   _password[_passwordSize] = '\0';
-  strncpy(password, _password, _passwordSize);
+  //strncpy(password, _password, _passwordSize);
   //password = _password;
+  String str(_password);
+  Serial.println(str);
+  password = String(_password);
 
+  Serial.println(ssid);
+  Serial.println(password);
   Serial.println(_ssid);
   Serial.println(_password);
   delay(500);
@@ -84,41 +91,36 @@ void loadConfig() {
 
 void handleConfig() {
  if (server.hasArg("ssid") && server.hasArg("password")) {
-    int _ssidSize = server.arg("ssid").length()+1;//sizeof(server.arg("ssid"));
-    char _ssid[_ssidSize];
-    server.arg("ssid").toCharArray(_ssid, sizeof(_ssid));
+    //int _ssidSize = server.arg("ssid").length();//sizeof(server.arg("ssid"));
+    //char _ssid[_ssidSize];
+    //server.arg("ssid").toCharArray(_ssid, sizeof(_ssid));
     //ssid = _ssid;
-    strncpy(ssid, _ssid, _ssidSize);
+    //strncpy(ssid, _ssid, _ssidSize);
+    ssid = server.arg("ssid");
     
     Serial.println(ssid);
-    Serial.println(_ssid);
-    Serial.println(_ssidSize);
-    Serial.println(sizeof(_ssid));
-    Serial.println(strlen(_ssid));
+    Serial.println(ssid.length());
 
-    int _passwordSize = server.arg("password").length()+1; //sizeof(server.arg("password"));
-    char _password[_passwordSize];
-    server.arg("password").toCharArray(_password, sizeof(_password));
+    //int _passwordSize = server.arg("password").length()+1; //sizeof(server.arg("password"));
+    //char _password[_passwordSize];
+    //server.arg("password").toCharArray(_password, sizeof(_password));
     //password = _password;
-    strncpy(password, _password, _passwordSize);
+    //strncpy(password, _password, _passwordSize);
+    password = server.arg("password");
     
     Serial.println(password);
-    Serial.println(_password);
-    Serial.println(_passwordSize);
-    Serial.println(sizeof(_password));
-    Serial.println(strlen(_password));
+    Serial.println(password.length());
 
-
-    EEPROM.begin(_ssidSize+_passwordSize+3);
+    EEPROM.begin(ssid.length()+password.length()+3);
     EEPROM.write(0, isConfigured);
-    EEPROM.write(1, sizeof(_ssid));
-    for (int i=0; i<sizeof(_ssid); i++) {
-      EEPROM.write(i+2, _ssid[i]);
+    EEPROM.write(1, ssid.length());
+    for (int i=0; i<ssid.length(); i++) {
+      EEPROM.write(i+2, ssid.charAt(i));
     }
 
-    EEPROM.write(sizeof(_ssid)+2, sizeof(_password));
-    for (int i=0; i<sizeof(_password); i++) {
-      EEPROM.write(i+3+sizeof(_ssid), _password[i]);
+    EEPROM.write(2+ssid.length(), password.length());
+    for (int i=0; i<password.length(); i++) {
+      EEPROM.write(i+3+ssid.length(), password.charAt(i));
     }
     EEPROM.commit();
     
@@ -136,7 +138,15 @@ void handleNotFound(){
 
 int connectToWiFi() {
     //WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
+    int _ssidSize = ssid.length()+1;
+    char _ssid[_ssidSize];
+    ssid.toCharArray(_ssid, sizeof(_ssid));
+    int _passwordSize = password.length()+1;
+    char _password[_passwordSize];
+    password.toCharArray(_password, sizeof(_password));
+    Serial.println(_ssid);
+    Serial.println(_password);
+    WiFi.begin(_ssid, _password);
     Serial.println("Connecting WiFi");
     Serial.println("SSID: ");
     Serial.println(ssid);
