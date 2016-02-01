@@ -9,42 +9,36 @@
 #define SSID_SIZE_ADDRESS       1
 #define SSID_START_ADDRESS      2
 
-
-const char* SWITCH_ID = "000015";
-const char* APssid = "Switch - 000015";
+int SWITCH_STATE = HIGH;
+const int led = BUILTIN_LED;
+const char* SWITCH_ID = "000016";
+const char* APssid = "Switch - 000016";
 bool isConfigured = false;
 String ssid;
 String password;
 
-int SWITCH_STATE = HIGH;
 
 ESP8266WebServer server(80);
 WiFiConfiguration configuration;
+InvertedSwitch *sw = new InvertedSwitch(0);
+//Switch *sw = new Switch(0);
 
-const int led = BUILTIN_LED;
 
-void switchKey(int state) {
-  digitalWrite(0, state);
-  SWITCH_STATE = state;
+void switchOn() {
+  sw->setOn();
   getState();
 }
 
-void switchOn() {
-  switchKey(LOW);
-  digitalWrite(BUILTIN_LED, LOW);
-}
-
 void switchOff() {
-  switchKey(HIGH);
-  digitalWrite(BUILTIN_LED, HIGH);
+  sw->setOff();
+  getState();
 }
 
 void getState() {
-  String message = "{ \"id\": \"" + String(SWITCH_ID) + "\", \"state\": " + String(SWITCH_STATE) + ", \"ip\": \"" + String(WiFi.localIP()[0]) +"."+ String(WiFi.localIP()[1]) +"."+ String(WiFi.localIP()[2]) +"."+ String(WiFi.localIP()[3])+ "\" }";
+  String message = "{ \"id\": \"" + String(SWITCH_ID) + "\", \"state\": " + String(sw->getState()) + ", \"ip\": \"" + String(WiFi.localIP()[0]) +"."+ String(WiFi.localIP()[1]) +"."+ String(WiFi.localIP()[2]) +"."+ String(WiFi.localIP()[3])+ "\" }";
   DEBUG_PRINTLN(message + "\0");
   server.send(200, "text/plain", message);
 }
-
 
 void handleConfig() {
  if (server.hasArg("ssid") && server.hasArg("password")) {
@@ -83,18 +77,18 @@ int connectToWiFi() {
       }
       
       delay(500);
-      Serial.print(".");
+      DEBUG_PRINT(".");
       i++;
     }
     
-    Serial.println("");
-    Serial.print("Connected to ");
-    Serial.println(ssid);
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
+    DEBUG_PRINTLN("");
+    DEBUG_PRINTLN("Connected to ");
+    DEBUG_PRINTLN(ssid);
+    DEBUG_PRINTLN("IP address: ");
+    DEBUG_PRINTLN(WiFi.localIP());
 
     if (MDNS.begin(SWITCH_ID)) {
-      Serial.println("MDNS responder started");
+      DEBUG_PRINTLN("MDNS responder started");
     }
 
     return 0;
@@ -109,20 +103,19 @@ void setup(void){
   
   Serial.begin(115200,SERIAL_8N1,SERIAL_TX_ONLY);
   
-  Serial.println("Loading config...");
+  DEBUG_PRINTLN("Loading config...");
   configuration.load();
   ssid = configuration.getSSID();
   password = configuration.getPassword();
-  Serial.println("Config loaded.");
+  DEBUG_PRINTLN("Config loaded.");
   
   if (connectToWiFi() == -1) {
     WiFi.softAP(APssid);
     IPAddress myIP = WiFi.softAPIP();
-    Serial.println("IP Address:");
-    Serial.println(myIP);
+    DEBUG_PRINTLN("IP Address:");
+    DEBUG_PRINTLN(myIP);
     isConfigured = false;
   }
-  //vSAP_Auth("68806692","e7rtP5ub");
   
   server.on("/on", switchOn);
   server.on("/off", switchOff);
@@ -130,13 +123,12 @@ void setup(void){
   server.on("/config", handleConfig);
   server.onNotFound(getState);
   server.begin();
-  Serial.println("HTTP server started");
+  DEBUG_PRINTLN("HTTP server started");
 }
 
 void loop(void){
   if (isConfigured && WiFi.status() != WL_CONNECTED) {
     connectToWiFi();
-    //   vSAP_Auth("68806692","e7rtP5ub");
 
     server.on("/on", switchOn);
     server.on("/off", switchOff);
@@ -144,7 +136,7 @@ void loop(void){
     server.on("/config", handleConfig);
     server.onNotFound(getState);
     server.begin();
-    Serial.println("HTTP server started");
+    DEBUG_PRINTLN("HTTP server started");
   }
 
   
@@ -155,13 +147,7 @@ void loop(void){
       delay(15);
     } while (buttonState == LOW);
 
-    if (SWITCH_STATE == HIGH) {
-      SWITCH_STATE = LOW;
-      switchOn();
-    } else if (SWITCH_STATE == LOW) {
-      SWITCH_STATE = HIGH;
-      switchOff();
-    }
+    sw->toggle();
   }
 
   server.handleClient();
