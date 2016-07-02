@@ -3,6 +3,7 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <EEPROM.h>
+#include <Adafruit_NeoPixel.h>
 #include "WiFiConfiguration.h"
 
 #define IS_CONFIGURED_ADDRESS   0
@@ -11,8 +12,8 @@
 
 int SWITCH_STATE = HIGH;
 const int led = BUILTIN_LED;
-const char* SWITCH_ID = "000016";
-const char* APssid = "Switch - 000016";
+const char* SWITCH_ID = "000021";
+const char* APssid = "Switch - 000021";
 bool isConfigured = false;
 String ssid;
 String password;
@@ -22,6 +23,8 @@ ESP8266WebServer server(80);
 WiFiConfiguration configuration;
 InvertedSwitch *sw = new InvertedSwitch(0);
 //Switch *sw = new Switch(0);
+
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(1, 2, NEO_GRB + NEO_KHZ800);
 
 
 void switchOn() {
@@ -62,13 +65,7 @@ void handleConfig() {
 }
 
 int connectToWiFi() {
-    int _ssidSize = ssid.length()+1;
-    char _ssid[_ssidSize];
-    ssid.toCharArray(_ssid, sizeof(_ssid));
-    int _passwordSize = password.length()+1;
-    char _password[_passwordSize];
-    password.toCharArray(_password, sizeof(_password));
-    WiFi.begin(_ssid, _password);
+    WiFi.begin(ssid.c_str(), password.c_str());
     
     int i=0;
     while (WiFi.status() != WL_CONNECTED) {
@@ -87,22 +84,21 @@ int connectToWiFi() {
     DEBUG_PRINTLN("IP address: ");
     DEBUG_PRINTLN(WiFi.localIP());
 
-    if (MDNS.begin(SWITCH_ID)) {
-      DEBUG_PRINTLN("MDNS responder started");
-    }
-
     return 0;
 }
 
 void setup(void){
   pinMode(led, OUTPUT);
   pinMode(0, OUTPUT);
-  digitalWrite(0, LOW);
+  //digitalWrite(0, HIGH);
   pinMode(2, OUTPUT);
   pinMode(3, INPUT);
+
+  sw->setOff();
   
   Serial.begin(115200,SERIAL_8N1,SERIAL_TX_ONLY);
-  
+  pixels.begin(); // This initializes the NeoPixel library.
+    
   DEBUG_PRINTLN("Loading config...");
   configuration.load();
   ssid = configuration.getSSID();
@@ -115,6 +111,12 @@ void setup(void){
     DEBUG_PRINTLN("IP Address:");
     DEBUG_PRINTLN(myIP);
     isConfigured = false;
+  }
+
+  if (MDNS.begin(SWITCH_ID)) {
+    MDNS.addService("switch", "tcp", 80);
+    //MDNS.addServiceTxt("switch", "tcp", "switchkey", "SWITCHVALUE");
+    DEBUG_PRINTLN("MDNS responder started.");
   }
   
   server.on("/on", switchOn);
@@ -149,6 +151,9 @@ void loop(void){
 
     sw->toggle();
   }
+
+  pixels.setPixelColor(0, pixels.Color(30,0, 30)); // Moderately bright green color.
+  pixels.show(); // This sends the updated pixel color to the hardware.
 
   server.handleClient();
 }
