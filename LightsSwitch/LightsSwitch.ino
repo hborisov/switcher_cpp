@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPUpdateServer.h>
 #include <ESP8266mDNS.h>
 #include <EEPROM.h>
 #include <Adafruit_NeoPixel.h>
@@ -12,14 +13,15 @@
 
 int SWITCH_STATE = HIGH;
 const int led = BUILTIN_LED;
-const char* SWITCH_ID = "000021";
-const char* APssid = "Switch - 000021";
+const char* SWITCH_ID = "000026";
+const char* APssid = "Switch - 000026";
 bool isConfigured = false;
 String ssid;
 String password;
 
 
 ESP8266WebServer server(80);
+//ESP8266HTTPUpdateServer httpUpdater;
 WiFiConfiguration configuration;
 InvertedSwitch *sw = new InvertedSwitch(0);
 //Switch *sw = new Switch(0);
@@ -64,6 +66,25 @@ void handleConfig() {
  }
 }
 
+void changeColor() {
+  if (server.hasArg("red") && server.hasArg("green") && server.hasArg("blue")) {
+    int red = server.arg("red").toInt();
+    int green = server.arg("green").toInt();
+    int blue = server.arg("blue").toInt();
+      DEBUG_PRINTLN("Color is: ");
+      DEBUG_PRINTLN(red);
+      DEBUG_PRINTLN(green);
+      DEBUG_PRINTLN(blue);
+
+    pixels.setPixelColor(0, pixels.Color(red, green, blue));
+    pixels.show(); // This sends the updated pixel color to the hardware.
+
+    delay(5000); 
+ } 
+ 
+  server.send(200, "text/html", "<html><head><title>Light Switch Config</title></head><body><form action=\"\"><fieldset>    <legend>Switch Color Configuration</legend>    <div id=\"red\">     <span>Red</span><input type=\"text\" name=\"red\" />    </div> <div id=\"green\">     <span>Green</span><input type=\"text\" name=\"green\" />    </div>  <div id=\"blue\">     <span>Blue</span><input type=\"text\" name=\"blue\" />    </div>  <span><input type=\"submit\"/><input type=\"reset\"/></span>  </fieldset></form></body></html>");  
+}
+
 int connectToWiFi() {
     WiFi.begin(ssid.c_str(), password.c_str());
     
@@ -73,7 +94,7 @@ int connectToWiFi() {
         return -1;
       }
       
-      delay(500);
+      delay(1000);
       DEBUG_PRINT(".");
       i++;
     }
@@ -94,10 +115,15 @@ void setup(void){
   pinMode(2, OUTPUT);
   pinMode(3, INPUT);
 
-  sw->setOff();
-  
-  Serial.begin(115200,SERIAL_8N1,SERIAL_TX_ONLY);
   pixels.begin(); // This initializes the NeoPixel library.
+  pixels.setPixelColor(0, pixels.Color(40,40,40));
+  pixels.setPixelColor(1, pixels.Color(40,40,40));
+  pixels.setPixelColor(2, pixels.Color(40,40,40));
+  pixels.setPixelColor(3, pixels.Color(40,40,40));
+  pixels.show(); // This sends the updated pixel color to the hardware.
+  sw->setOff();
+  Serial.begin(115200,SERIAL_8N1,SERIAL_TX_ONLY);
+  
     
   DEBUG_PRINTLN("Loading config...");
   configuration.load();
@@ -118,27 +144,36 @@ void setup(void){
     //MDNS.addServiceTxt("switch", "tcp", "switchkey", "SWITCHVALUE");
     DEBUG_PRINTLN("MDNS responder started.");
   }
+
+  //httpUpdater.setup(&server);
   
   server.on("/on", switchOn);
   server.on("/off", switchOff);
   server.on("/state", getState);
   server.on("/config", handleConfig);
+  server.on("/color", changeColor);
   server.onNotFound(getState);
+  
   server.begin();
   DEBUG_PRINTLN("HTTP server started");
 }
 
 void loop(void){
   if (isConfigured && WiFi.status() != WL_CONNECTED) {
+    pixels.setPixelColor(0, pixels.Color(0,0,30));
+    pixels.show(); // This sends the updated pixel color to the hardware.
     connectToWiFi();
 
     server.on("/on", switchOn);
     server.on("/off", switchOff);
     server.on("/state", getState);
     server.on("/config", handleConfig);
+    server.on("/color", changeColor);
     server.onNotFound(getState);
     server.begin();
     DEBUG_PRINTLN("HTTP server started");
+    pixels.setPixelColor(0, pixels.Color(30,30,0));
+    pixels.show(); // This sends the updated pixel color to the hardware.
   }
 
   
@@ -152,8 +187,13 @@ void loop(void){
     sw->toggle();
   }
 
-  pixels.setPixelColor(0, pixels.Color(30,0, 30)); // Moderately bright green color.
-  pixels.show(); // This sends the updated pixel color to the hardware.
+  if (sw->getState() == ON) {
+    pixels.setPixelColor(0, pixels.Color(0,30,0));
+    pixels.show(); // This sends the updated pixel color to the hardware.
+  } else {
+    pixels.setPixelColor(0, pixels.Color(30,0,0));
+    pixels.show(); // This sends the updated pixel color to the hardware.
+  }
 
   server.handleClient();
 }
