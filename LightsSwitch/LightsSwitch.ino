@@ -1,7 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-#include <ESP8266HTTPUpdateServer.h>
 #include <ESP8266mDNS.h>
 #include <EEPROM.h>
 #include <Adafruit_NeoPixel.h>
@@ -13,20 +12,20 @@
 
 int SWITCH_STATE = HIGH;
 const int led = BUILTIN_LED;
-const char* SWITCH_ID = "000026";
-const char* APssid = "Switch - 000026";
+const char* SWITCH_ID = "000029";
+const char* APssid = "Switch - 000029";
 bool isConfigured = false;
 String ssid;
 String password;
 
 
 ESP8266WebServer server(80);
-//ESP8266HTTPUpdateServer httpUpdater;
 WiFiConfiguration configuration;
+
 InvertedSwitch *sw = new InvertedSwitch(0);
 //Switch *sw = new Switch(0);
 
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(1, 2, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(4, 2, NEO_GRB + NEO_KHZ800);
 
 
 void switchOn() {
@@ -145,7 +144,6 @@ void setup(void){
     DEBUG_PRINTLN("MDNS responder started.");
   }
 
-  //httpUpdater.setup(&server);
   
   server.on("/on", switchOn);
   server.on("/off", switchOff);
@@ -181,17 +179,23 @@ void loop(void){
   if (buttonState == LOW) {
     do {
       buttonState = digitalRead(3);
-      delay(15);
+      delay(100);
     } while (buttonState == LOW);
 
     sw->toggle();
   }
 
   if (sw->getState() == ON) {
-    pixels.setPixelColor(0, pixels.Color(0,30,0));
+    pixels.setPixelColor(0, pixels.Color(0,40,0));
+    pixels.setPixelColor(1, pixels.Color(0,40,0));
+    pixels.setPixelColor(2, pixels.Color(0,40,0));
+    pixels.setPixelColor(3, pixels.Color(0,40,0));
     pixels.show(); // This sends the updated pixel color to the hardware.
   } else {
     pixels.setPixelColor(0, pixels.Color(30,0,0));
+    pixels.setPixelColor(1, pixels.Color(30,0,0));
+    pixels.setPixelColor(2, pixels.Color(30,0,0));
+    pixels.setPixelColor(3, pixels.Color(30,0,0));
     pixels.show(); // This sends the updated pixel color to the hardware.
   }
 
