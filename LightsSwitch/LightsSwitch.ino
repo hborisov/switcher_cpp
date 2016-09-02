@@ -12,8 +12,8 @@
 
 int SWITCH_STATE = HIGH;
 const int led = BUILTIN_LED;
-const char* SWITCH_ID = "000029";
-const char* APssid = "Switch - 000029";
+const char* SWITCH_ID = "000033";
+const char* APssid = "Switch - 000033";
 bool isConfigured = false;
 String ssid;
 String password;
