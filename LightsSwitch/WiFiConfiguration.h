@@ -2,7 +2,8 @@
 #define WiFiConfiguration_h
 
 #include "Arduino.h"
-#include "EEPROM.h" 
+#include "EEPROM.h"
+#include <Adafruit_NeoPixel.h>
 
 #define IS_CONFIGURED_BYTE_ADDRESS  0
 #define SSID_SIZE_ADDRESS           1
@@ -61,5 +62,16 @@ class InvertedSwitch {
     Switch *sw;
 };
 
+class Display {
+  public:
+    Display(int numberOfPixels);
+    void showLoading();
+    void showOn();
+    void showOff();
+    void setFrame(int frame[][3]);
+  private:
+    Adafruit_NeoPixel screen;
+    int numberOfPixels;
+};
 
 #endif

@@ -3,17 +3,11 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <EEPROM.h>
-#include <Adafruit_NeoPixel.h>
 #include "WiFiConfiguration.h"
 
-#define IS_CONFIGURED_ADDRESS   0
-#define SSID_SIZE_ADDRESS       1
-#define SSID_START_ADDRESS      2
-
-int SWITCH_STATE = HIGH;
 const int led = BUILTIN_LED;
-const char* SWITCH_ID = "000033";
-const char* APssid = "Switch - 000033";
+const char* SWITCH_ID = "000035";
+const char* APssid = "Switch - 000035";
 bool isConfigured = false;
 String ssid;
 String password;
@@ -24,9 +18,7 @@ WiFiConfiguration configuration;
 
 InvertedSwitch *sw = new InvertedSwitch(0);
 //Switch *sw = new Switch(0);
-
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(4, 2, NEO_GRB + NEO_KHZ800);
-
+Display *display = new Display(16);
 
 void switchOn() {
   sw->setOn();
@@ -75,9 +67,9 @@ void changeColor() {
       DEBUG_PRINTLN(green);
       DEBUG_PRINTLN(blue);
 
-    pixels.setPixelColor(0, pixels.Color(red, green, blue));
-    pixels.show(); // This sends the updated pixel color to the hardware.
+    int colorArray[][3] {{red,green,blue},{red,green,blue},{red,green,blue},{red,green,blue}};
 
+    display->setFrame(colorArray);
     delay(5000); 
  } 
  
@@ -114,12 +106,7 @@ void setup(void){
   pinMode(2, OUTPUT);
   pinMode(3, INPUT);
 
-  pixels.begin(); // This initializes the NeoPixel library.
-  pixels.setPixelColor(0, pixels.Color(40,40,40));
-  pixels.setPixelColor(1, pixels.Color(40,40,40));
-  pixels.setPixelColor(2, pixels.Color(40,40,40));
-  pixels.setPixelColor(3, pixels.Color(40,40,40));
-  pixels.show(); // This sends the updated pixel color to the hardware.
+  display->showLoading();
   sw->setOff();
   Serial.begin(115200,SERIAL_8N1,SERIAL_TX_ONLY);
   
@@ -158,8 +145,7 @@ void setup(void){
 
 void loop(void){
   if (isConfigured && WiFi.status() != WL_CONNECTED) {
-    pixels.setPixelColor(0, pixels.Color(0,0,30));
-    pixels.show(); // This sends the updated pixel color to the hardware.
+    display->showLoading();
     connectToWiFi();
 
     server.on("/on", switchOn);
@@ -170,8 +156,7 @@ void loop(void){
     server.onNotFound(getState);
     server.begin();
     DEBUG_PRINTLN("HTTP server started");
-    pixels.setPixelColor(0, pixels.Color(30,30,0));
-    pixels.show(); // This sends the updated pixel color to the hardware.
+    display->showLoading();
   }
 
   
@@ -186,17 +171,9 @@ void loop(void){
   }
 
   if (sw->getState() == ON) {
-    pixels.setPixelColor(0, pixels.Color(0,40,0));
-    pixels.setPixelColor(1, pixels.Color(0,40,0));
-    pixels.setPixelColor(2, pixels.Color(0,40,0));
-    pixels.setPixelColor(3, pixels.Color(0,40,0));
-    pixels.show(); // This sends the updated pixel color to the hardware.
+    display->showOn();
   } else {
-    pixels.setPixelColor(0, pixels.Color(30,0,0));
-    pixels.setPixelColor(1, pixels.Color(30,0,0));
-    pixels.setPixelColor(2, pixels.Color(30,0,0));
-    pixels.setPixelColor(3, pixels.Color(30,0,0));
-    pixels.show(); // This sends the updated pixel color to the hardware.
+    display->showOff();
   }
 
   server.handleClient();
